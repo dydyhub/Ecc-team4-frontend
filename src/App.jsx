@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import LoginPage from './pages/LoginPage';
-import TripsPage from './pages/TripsPage';
-import TripCreatePage from './pages/TripCreatePage';
+import TripsPage from './pages/TripsPage/TripsPage.jsx';
+import TripCreatePage from './pages/TripCreatePage/TripCreatePage.jsx';
 import PlacesPage from './pages/PlacesPage.jsx';
 import PlaceDetailPage from './pages/PlaceDetailPage';
 import TimelinePage from './pages/TimelinePage';
