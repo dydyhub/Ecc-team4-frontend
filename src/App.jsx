@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import LoginPage from './pages/LoginPage';
-import TripsPage from './pages/TripsPage';
-import TripCreatePage from './pages/TripCreatePage';
+import LoginPage from './pages/LoginPage/LoginPage.jsx';
+import TripsPage from './pages/TripsPage/TripsPage.jsx';
+import TripCreatePage from './pages/TripCreatePage/TripCreatePage.jsx';
 import PlacesPage from './pages/PlacesPage.jsx';
 import PlaceDetailPage from './pages/PlaceDetailPage';
-import TimelinePage from './pages/TimelinePage';
+import TimelinePage from './pages/TimelinePage/TimelinePage.jsx';
+import ScheduleAddPage from './pages/TimelinePage/ScheduleAddPage.jsx';
+
 
 function App() {
   return (
@@ -31,6 +33,9 @@ function App() {
 
         {/* 일정 타임라인 */}
         <Route path="/trips/:tripId/timeline" element={<TimelinePage />} />
+
+        {/* 스케쥴 추가 */}
+        <Route path="/trips/timeline/add" element={<ScheduleAddPage />} />
       </Routes>
     </BrowserRouter>
   );
