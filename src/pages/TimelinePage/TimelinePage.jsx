@@ -54,11 +54,13 @@ const TIMELINE_DATA = {
       schedules: [
         {
           time: '19:00',
+          endTime: '20:00',
           title: '침사추이',
           description: '관광명소-침사추이 시계탑',
         },
         {
           time: '20:00',
+          endTime: '20:30',
           title: '빅토리아 하버',
           description: '체험-심포니오브라이트쇼',
         },
@@ -73,6 +75,7 @@ const TIMELINE_DATA = {
       schedules: [
         {
           time: '20:30',
+          endTime: '21:30',
           title: '1881 헤리티지',
           description: '쇼핑-쇼핑몰',
         },
@@ -160,7 +163,14 @@ export default function TimelinePage() {
               <TimelineWrapper>
                 {day.schedules.map((item, index) => (
                   <TimelineItem key={index}>
-                    <TimeColumn>{item.time}</TimeColumn>
+                    <TimeColumn>
+                      <div>{item.time}</div>
+                      {item.endTime && (
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          ~ {item.endTime}
+                        </div>
+                      )}
+                    </TimeColumn>
                     <Dot />
 
                     <ContentRow>
