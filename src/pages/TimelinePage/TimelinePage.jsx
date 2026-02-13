@@ -1,20 +1,7 @@
-/*import { useParams } from 'react-router-dom';
-
-function TimelinePage() {
-  const { tripId } = useParams();
-
-  return (
-    <div>
-      <h1>{tripId} 여행 일정</h1>
-      <p>Day 1</p>
-      <p>Day 2</p>
-    </div>
-  );
-}
-
-export default TimelinePage;*/
-
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { getTripTimeline, deleteTimelineItem } from '../../services/timeline';
+import { getPlaceDetail } from '../../services/places';
 
 import Card from '../../components/Card';
 import Input from '../../components/Input';
@@ -28,6 +15,7 @@ import {
   TimelineSection,
   SideSection,
   SideFooter,
+  PageTitle,
   TripHeader,
   TripHeaderCard,
   TripHeaderText,
@@ -47,7 +35,6 @@ import {
   Description,
   BlueLine,
   SideContent,
-  MemoImageBox,
   BudgetItem,
   BudgetLabel,
   Won,
@@ -55,45 +42,110 @@ import {
 
 const VIEW_TABS = ['일정', '장소'];
 
-const TIMELINE_DATA = {
-  tripTitle: '홍콩 여행 with 화연',
-  nights: 4,
-  days: 5,
-  daysData: [
-    {
-      date: '2026.03.12',
-      dayLabel: '목',
-      theme: '시내 야경',
-      schedules: [
-        {
-          time: '19:00',
-          title: '침사추이',
-          description: '관광명소-침사추이 시계탑',
-        },
-        {
-          time: '20:00',
-          title: '빅토리아 하버',
-          description: '체험-심포니오브라이트쇼',
-        },
-      ],
-    },
-    {
-      date: '2026.03.13',
-      dayLabel: '금',
-      theme: '시내 야경',
-      schedules: [
-        {
-          time: '20:30',
-          title: '1881 헤리티지',
-          description: '쇼핑-쇼핑몰',
-        },
-      ],
-    },
-  ],
+// 시간/요일 포맷
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  return timeStr.slice(0, 5);
+};
+
+const getDayLabel = (dateStr) => {
+  const day = new Date(dateStr).getDay();
+  return ['일', '월', '화', '수', '목', '금', '토'][day];
 };
 
 export default function TimelinePage() {
+  const { tripId } = useParams();
   const navigate = useNavigate();
+
+  const [daysData, setDaysData] = useState([]);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [tripTitle, setTripTitle] = useState('');
+  const [nights, setNights] = useState(0);
+  const [days, setDays] = useState(0);
+
+  useEffect(() => {
+    async function fetchTimeline() {
+      try {
+        const res = await getTripTimeline(tripId);
+        const apiDays = res.data.days;
+
+        const mappedDays = await Promise.all(
+          apiDays.map(async (day) => {
+            const schedules = await Promise.all(
+              day.items.map(async (item) => {
+                let placeDetail = {};
+                try {
+                  const detailRes = await getPlaceDetail(tripId, item.placeId);
+                  placeDetail = detailRes.data;
+                } catch {
+                  alert('장소 상세 조회 실패');
+                }
+
+                return {
+                  timelineId: item.timelineId,
+                  time: formatTime(item.startTime),
+                  endTime: formatTime(item.endTime),
+                  title: placeDetail.name || item.placeName,
+                  placeId: item.placeId,
+                  description: placeDetail.description || '',
+                  imageUrl: placeDetail.coverImageUrl || '',
+                  category: placeDetail.category || '',
+                  imageUrls: placeDetail.imageUrls || [],
+                };
+              }),
+            );
+
+            return {
+              dayId: day.dayId,
+              date: day.dayDate,
+              dayLabel: getDayLabel(day.dayDate),
+              theme: day.themeTitle,
+              memo: day.dayNote,
+              budget: { planned: day.budgetPlanned, spent: day.budgetSpent },
+              schedules,
+            };
+          }),
+        );
+
+        setDaysData(mappedDays);
+        setTripTitle(res.data.tripTitle || '여행');
+        setNights(res.data.nights || 0);
+        setDays(res.data.daysCount || mappedDays.length);
+      } catch {
+        alert('타임라인 조회 실패');
+      }
+    }
+
+    fetchTimeline();
+  }, [tripId]);
+
+  const selectedDay = daysData[selectedDayIndex];
+
+  const handleDeleteSchedule = async (timelineId) => {
+    try {
+      await deleteTimelineItem(timelineId);
+
+      const newDays = [...daysData];
+      newDays[selectedDayIndex].schedules = newDays[
+        selectedDayIndex
+      ].schedules.filter((s) => s.timelineId !== timelineId);
+      setDaysData(newDays);
+    } catch {
+      alert('삭제 실패');
+    }
+  };
+
+  const handleMemoChange = (e) => {
+    const newDays = [...daysData];
+    newDays[selectedDayIndex].memo = e.target.value;
+    setDaysData(newDays);
+  };
+
+  const handleBudgetChange = (field, value) => {
+    const newDays = [...daysData];
+    newDays[selectedDayIndex].budget[field] = value;
+    setDaysData(newDays);
+  };
 
   const handleSave = () => {
     // 저장 API
@@ -102,14 +154,13 @@ export default function TimelinePage() {
 
   const handleTabChange = (index) => {
     if (index === 1) {
-      const newTripId = '1'; // API가 반환하는 ID
-      navigate(`/trips/${newTripId}/places`);
+      navigate(`/trips/${tripId}/places`);
     }
   };
 
   return (
     <>
-      <h1>MY TIMELINE</h1>
+      <PageTitle>MY TIMELINE</PageTitle>
       <TabWrapper>
         <Tab tabs={VIEW_TABS} onChange={handleTabChange} defaultIndex={0} />
       </TabWrapper>
@@ -117,22 +168,36 @@ export default function TimelinePage() {
       <TripHeader>
         <TripHeaderCard>
           <TripHeaderText>
-            {TIMELINE_DATA.tripTitle} | {TIMELINE_DATA.nights}박{' '}
-            {TIMELINE_DATA.days}일
+            {tripTitle} | {nights}박 {days}일
           </TripHeaderText>
         </TripHeaderCard>
       </TripHeader>
       <PageWrapper>
         <TimelineSection>
-          {TIMELINE_DATA.daysData.map((day, index) => (
-            <DayBlock key={index}>
+          {daysData.map((day, index) => (
+            <DayBlock
+              key={day.dayId}
+              onClick={() => setSelectedDayIndex(index)}
+            >
               <DayHeader>
-                <DateText>
-                  {day.date}
-                  <DayLabel>({day.dayLabel})</DayLabel>
-                </DateText>
+                <div
+                  style={{
+                    display: 'inline-block',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    boxShadow:
+                      selectedDayIndex === index
+                        ? '0 2px 6px rgba(0,0,0,0.15)'
+                        : 'none',
+                  }}
+                >
+                  <DateText>
+                    {day.date}
+                    <DayLabel>({day.dayLabel})</DayLabel>
+                  </DateText>
+                </div>
 
-                <Card padding="12px 16px" radius="12px">
+                <Card padding="4px 16px" radius="12px">
                   <DayHeaderCard>
                     <Title>하루 테마</Title>
                     <Description>{day.theme}</Description>
@@ -141,9 +206,16 @@ export default function TimelinePage() {
               </DayHeader>
 
               <TimelineWrapper>
-                {day.schedules.map((item, index) => (
-                  <TimelineItem key={index}>
-                    <TimeColumn>{item.time}</TimeColumn>
+                {day.schedules.map((item) => (
+                  <TimelineItem key={item.timelineId}>
+                    <TimeColumn>
+                      <div>{item.time}</div>
+                      {item.endTime && (
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          ~ {item.endTime}
+                        </div>
+                      )}
+                    </TimeColumn>
                     <Dot />
 
                     <ContentRow>
@@ -154,10 +226,21 @@ export default function TimelinePage() {
                       </Card>
 
                       <Card padding="16px" radius="12px">
-                        <FixedCardInner width={320}>
-                          <Title>{item.title}</Title>
-                          <Description>{item.description}</Description>
-                        </FixedCardInner>
+                        <div style={{ position: 'relative' }}>
+                          <div
+                            style={{ position: 'absolute', top: 0, right: 0 }}
+                          >
+                            <MoreMenu
+                              timelineId={item.timelineId}
+                              handleDeleteSchedule={handleDeleteSchedule}
+                            />
+                          </div>
+
+                          <FixedCardInner width={320}>
+                            <Title>{item.title}</Title>
+                            <Description>{item.description}</Description>
+                          </FixedCardInner>
+                        </div>
                       </Card>
                     </ContentRow>
                   </TimelineItem>
@@ -177,10 +260,11 @@ export default function TimelinePage() {
             </Card>
 
             <Card padding="16px" radius="12px">
-              <MemoImageBox>이미지</MemoImageBox>
               <TextArea
-                placeholder="오늘의 날씨, 할 일, 컨디션, 생각 등을 자유롭게 기록해 주세요"
+                placeholder="날짜를 클릭해 오늘의 날씨, 할 일, 컨디션, 생각 등을 자유롭게 기록해 주세요"
                 rows={8}
+                value={selectedDay?.memo || ''}
+                onChange={handleMemoChange}
               />
             </Card>
 
@@ -192,19 +276,29 @@ export default function TimelinePage() {
             <Card padding="16px" radius="12px">
               <BudgetItem>
                 <BudgetLabel>예산</BudgetLabel>
-                <Input placeholder="0" />
+                <Input
+                  placeholder="0"
+                  value={selectedDay?.budget?.planned || ''}
+                  onChange={(e) =>
+                    handleBudgetChange('planned', e.target.value)
+                  }
+                />
                 <Won>원</Won>
               </BudgetItem>
 
               <BudgetItem style={{ marginTop: '12px' }}>
                 <BudgetLabel>지출</BudgetLabel>
-                <Input placeholder="0" />
+                <Input
+                  placeholder="0"
+                  value={selectedDay?.budget?.spent || ''}
+                  onChange={(e) => handleBudgetChange('spent', e.target.value)}
+                />
                 <Won>원</Won>
               </BudgetItem>
             </Card>
 
             <SideFooter>
-              <Button onClick={() => navigate(`/trips/timeline/add`)}>
+              <Button onClick={() => navigate(`/trips/${tripId}/timeline/add`)}>
                 새 일정 추가
               </Button>
 
@@ -214,5 +308,64 @@ export default function TimelinePage() {
         </SideSection>
       </PageWrapper>
     </>
+  );
+}
+
+function MoreMenu({ timelineId, handleDeleteSchedule }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '18px',
+          cursor: 'pointer',
+        }}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '24px',
+            left: '0',
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            zIndex: 10,
+            minWidth: '120px',
+          }}
+        >
+          <MenuItem onClick={() => alert('장소 보기')}>장소 보기</MenuItem>
+          <MenuItem danger onClick={() => handleDeleteSchedule(timelineId)}>
+            일정 삭제
+          </MenuItem>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuItem({ children, onClick, danger }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '8px 12px',
+        fontSize: '14px',
+        cursor: 'pointer',
+        color: danger ? '#dc2626' : '#111827',
+        whiteSpace: 'nowrap',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = '#f3f4f6')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      {children}
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import PlaceDetailPage from './pages/PlaceDetailPage';
 import TimelinePage from './pages/TimelinePage/TimelinePage.jsx';
 import ScheduleAddPage from './pages/TimelinePage/ScheduleAddPage.jsx';
 
+import Layout from './components/Layout/Layout.jsx';
 
 function App() {
   return (
@@ -16,26 +17,34 @@ function App() {
         {/* 로그인 */}
         <Route path="/" element={<LoginPage />} />
 
-        {/* 메인(여행 목록) */}
-        <Route path="/trips" element={<TripsPage />} />
+        <Route element={<Layout />}>
+          {/* 메인(여행 목록) */}
+          <Route path="/trips" element={<TripsPage />} />
 
-        {/* 여행 추가 */}
-        <Route path="/trips/new" element={<TripCreatePage />} />
+          {/* 여행 추가 */}
+          <Route path="/trips/new" element={<TripCreatePage />} />
 
-        {/* 장소 리스트 */}
-        <Route path="/trips/:tripId/places" element={<PlacesPage />} />
+          {/* 여행 수정 */}
+          <Route path="/trips/:tripId/edit" element={<TripCreatePage />} />
 
-        {/* 장소 상세 */}
-        <Route
-          path="/trips/:tripId/places/:placeId"
-          element={<PlaceDetailPage />}
-        />
+          {/* 장소 리스트 */}
+          <Route path="/trips/:tripId/places" element={<PlacesPage />} />
 
-        {/* 일정 타임라인 */}
-        <Route path="/trips/:tripId/timeline" element={<TimelinePage />} />
+          {/* 장소 상세 */}
+          <Route
+            path="/trips/:tripId/places/:placeId"
+            element={<PlaceDetailPage />}
+          />
 
-        {/* 스케쥴 추가 */}
-        <Route path="/trips/timeline/add" element={<ScheduleAddPage />} />
+          {/* 일정 타임라인 */}
+          <Route path="/trips/:tripId/timeline" element={<TimelinePage />} />
+
+          {/* 스케쥴 추가 */}
+          <Route
+            path="/trips/:tripId/timeline/add"
+            element={<ScheduleAddPage />}
+          />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
