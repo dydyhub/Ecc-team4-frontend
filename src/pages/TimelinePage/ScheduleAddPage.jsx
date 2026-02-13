@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { addTimelineItem } from '../../services/timeline';
+import { getPlaces, getPlaceDetail } from '../../services/places';
+
 import Card from '../../components/Card';
 import Select from '../../components/Select';
 import TextArea from '../../components/TextArea';
@@ -18,40 +21,80 @@ import {
   TextAreaWrapper,
 } from './ScheduleAddPage.styles';
 
-const MOCK_PLACES = [
-  { value: 1, label: '서울 시내' },
-  { value: 2, label: '한강공원' },
-  { value: 3, label: '명동 쇼핑' },
-  { value: 4, label: '강남 카페' },
-];
-
 const CATEGORY_OPTIONS = ['관광', '체험', '쇼핑', '음식', '숙소', '디저트'];
 
-export default function ScheduleAddPage() {
+export default function ScheduleAddPage({ tripId }) {
   const navigate = useNavigate();
 
+  const [places, setPlaces] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState('');
+  const [placeDetail, setPlaceDetail] = useState(null);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
-
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [memo, setMemo] = useState('');
-
-  const handleSave = () => {
-    if (!startTime || !endTime) return;
-
-    const startDateTime = new Date(selectedDate);
-    startDateTime.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
-
-    const endDateTime = new Date(selectedDate);
-    endDateTime.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
-
-    navigate(-1);
-  };
+  const [loading, setLoading] = useState(false);
 
   const isInvalidTime = startTime && endTime && endTime <= startTime;
+
+  useEffect(() => {
+    const fetchPlaces = async () => {
+      try {
+        const res = await getPlaces(tripId);
+        const options = res.data.map((place) => ({
+          value: place.placeId,
+          label: place.name,
+        }));
+        setPlaces(options);
+      } catch {
+        alert('실패');
+      }
+    };
+
+    fetchPlaces();
+  }, [tripId]);
+
+  useEffect(() => {
+    if (!selectedPlace) return;
+
+    const fetchPlaceDetail = async () => {
+      try {
+        const res = await getPlaceDetail(tripId, selectedPlace);
+        setPlaceDetail(res.data);
+      } catch {
+        alert('실패');
+      }
+    };
+
+    fetchPlaceDetail();
+  }, [selectedPlace, tripId]);
+
+  const handleSave = async () => {
+    if (!startTime || !endTime || !selectedPlace || !placeDetail) return;
+
+    setLoading(true);
+
+    try {
+      const timelineData = {
+        dayDate: selectedDate.toISOString().slice(0, 10), // yyyy-mm-dd
+        startTime: startTime.toTimeString().slice(0, 5), // HH:mm
+        endTime: endTime.toTimeString().slice(0, 5), // HH:mm
+        placeId: placeDetail.placeId,
+        name: placeDetail.name,
+        description: placeDetail.description,
+        category: placeDetail.category,
+        coverImageUrl: placeDetail.coverImageUrl,
+        imageUrls: placeDetail.imageUrls,
+      };
+
+      await addTimelineItem(tripId, timelineData);
+      navigate(-1);
+    } catch {
+      alert('일정 추가에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <PageWrapper>
@@ -60,9 +103,11 @@ export default function ScheduleAddPage() {
           <Row>
             <Label>장소</Label>
             <Select
-              options={MOCK_PLACES}
-              value={selectedPlace}
-              onChange={(e) => setSelectedPlace(e.target.value)}
+              options={places}
+              value={places.find((p) => p.value === selectedPlace)}
+              onChange={(selectedOption) =>
+                setSelectedPlace(selectedOption.value)
+              }
               style={{ flex: 1 }}
             />
           </Row>
@@ -110,12 +155,11 @@ export default function ScheduleAddPage() {
             <Label>카테고리</Label>
             <ChipRow>
               {CATEGORY_OPTIONS.map((cat) => {
-                const isSelected = selectedCategory === cat;
+                const isSelected = placeDetail?.category === cat;
 
                 return (
                   <div
                     key={cat}
-                    onClick={() => setSelectedCategory(cat)}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -143,9 +187,9 @@ export default function ScheduleAddPage() {
             <TextAreaWrapper>
               <TextArea
                 rows={6}
-                placeholder="메모를 입력하세요"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
+                placeholder="장소 설명"
+                value={placeDetail?.description || ''}
+                readOnly
                 style={{ flex: 1 }}
               />
             </TextAreaWrapper>
@@ -162,7 +206,7 @@ export default function ScheduleAddPage() {
           gap: '12px',
         }}
       >
-        <Button onClick={handleSave} disabled={isInvalidTime}>
+        <Button onClick={handleSave} disabled={isInvalidTime || loading}>
           추가하기
         </Button>
         <Button onClick={() => navigate(-1)}>취소</Button>

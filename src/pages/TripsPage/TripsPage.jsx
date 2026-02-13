@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
-import Card from '../../components/Card';
-import Select from '../../components/Select';
-import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { getTrips, deleteTrip } from '../../services/trip-main';
 import ReactPaginate from 'react-paginate';
 
+import Card from '../../components/Card';
+import Select from '../../components/Select';
 import logoImg from '../../assets/logo.png';
 
 import {
@@ -25,40 +26,33 @@ import {
 } from './TripsPage.styles';
 
 const TRAVEL_FILTER_OPTIONS = [
-  { label: '새로운 여행', value: 'New' },
-  { label: '다녀온 여행', value: 'Past' },
-];
-
-const MOCK_TRAVELS = [
-  {
-    id: 1,
-    country: '대전',
-    period: '24.09.07.-24.09.10.',
-    status: 'New',
-    imageUrl: logoImg,
-  },
-  {
-    id: 2,
-    country: '바르셀로나',
-    period: '24.12.14.-24.12.19.',
-    status: 'Past',
-  },
-  { id: 3, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 4, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 5, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 6, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 7, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 8, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
-  { id: 9, country: '오사카', period: '25.01.22.-25.01.25.', status: 'New' },
+  { label: '새로운 여행', value: 1 },
+  { label: '다녀온 여행', value: 2 },
 ];
 
 const ITEMS_PER_PAGE = 6;
 
+const formatPeriod = (startDate, endDate) => {
+  return `${startDate.replaceAll('-', '.')} - ${endDate.replaceAll('-', '.')}`;
+};
+
 export default function TripsPage() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState('New');
+  const location = useLocation();
+
+  const [filter, setFilter] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
-  const [travels, setTravels] = useState(MOCK_TRAVELS);
+  const [travels, setTravels] = useState([]);
+
+  useEffect(() => {
+    getTrips()
+      .then((res) => {
+        setTravels(res.data);
+      })
+      .catch(() => {
+        alert('여행 목록을 불러오지 못했어요');
+      });
+  }, [location.pathname]);
 
   const filteredTravels = travels.filter((travel) => travel.status === filter);
 
@@ -71,10 +65,16 @@ export default function TripsPage() {
     setCurrentPage(selectedItem.selected);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('이 여행을 삭제할까요?')) return;
 
-    setTravels((prev) => prev.filter((travel) => travel.id !== id));
+    try {
+      await deleteTrip(id);
+
+      setTravels((prev) => prev.filter((travel) => travel.tripId !== id));
+    } catch {
+      alert('삭제에 실패했어요');
+    }
   };
 
   return (
@@ -85,7 +85,7 @@ export default function TripsPage() {
           <Select
             value={filter}
             onChange={(e) => {
-              setFilter(e.target.value);
+              setFilter(Number(e.target.value));
               setCurrentPage(0);
             }}
             options={TRAVEL_FILTER_OPTIONS}
@@ -97,20 +97,22 @@ export default function TripsPage() {
       <Grid>
         {currentTravels.map((travel) => (
           <ClickWrapper
-            key={travel.id}
-            onClick={() => navigate(`/trips/${travel.id}/places`)}
+            key={travel.tripId}
+            onClick={() => navigate(`/trips/${travel.tripId}/places`)}
           >
             <Card padding="0" radius="12px">
               <CardInner backgroundImage={travel.imageUrl || logoImg}>
                 <CardOverlay>
-                  <Country>{travel.country}</Country>
-                  <Period>{travel.period}</Period>
+                  <Country>{travel.destination}</Country>
+                  <Period>
+                    {formatPeriod(travel.startDate, travel.endDate)}
+                  </Period>
 
                   <CardActions>
                     <EditButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/trips/${travel.id}/places`);
+                        navigate(`/trips/${travel.tripId}/edit`);
                       }}
                     >
                       수정
@@ -119,7 +121,7 @@ export default function TripsPage() {
                     <DeleteButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(travel.id);
+                        handleDelete(travel.tripId);
                       }}
                     >
                       삭제
