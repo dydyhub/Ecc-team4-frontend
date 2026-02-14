@@ -85,7 +85,6 @@ export const TrashIcon = styled.div`
   &:hover { color: #FF4B4B; }
 `;
 
-/* 개선된 원형 X 버튼 스타일 */
 export const DeleteConfirmCircle = styled.button`
   position: absolute;
   top: 8px;
@@ -116,6 +115,7 @@ export const ImagePlaceholder = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  img { width: 100%; height: 100%; object-fit: cover; }
   .icon-box { font-size: 30px; opacity: 0.5; }
 `;
 

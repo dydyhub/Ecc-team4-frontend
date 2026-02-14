@@ -1,7 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiEdit2, FiPlus, FiChevronLeft, FiCalendar, FiX } from 'react-icons/fi'; // FiX 추가
-import * as S from './PlaceDetailPage.styles';
+import { FiEdit2, FiPlus, FiChevronLeft, FiCalendar, FiX } from 'react-icons/fi';
+import tourImg from '../../assets/관광.png';
+import activityImg from '../../assets/체험.png';
+import shoppingImg from '../../assets/쇼핑.png';
+import foodImg from '../../assets/음식.png';
+import hotelImg from '../../assets/숙소.png';
+import cafeImg from '../../assets/카페디저트.png';
+
+import {
+  Container,
+  Navbar,
+  LogoWrapper,
+  MainCard,
+  BackContainer,
+  TitleSection,
+  EditInputArea,
+  CategoryGroup,
+  CategoryBtn,
+  CardList,
+  PhotoCard,
+  DeleteImgBtn,
+  AddMoreBtn,
+  MemoSection,
+  MemoBox,
+  ActionWrapper
+} from './PlaceDetailPage.styles';
+
 import Button from '../../components/Button';
 import logoImg from '../../assets/logo.png';
 
@@ -19,12 +44,12 @@ function PlaceDetailPage() {
   const [isMemoEditing, setIsMemoEditing] = useState(false);
 
   const categories = [
-    { label: '관광', color: '#EF4444' },
-    { label: '체험', color: '#F97316' },
-    { label: '쇼핑', color: '#2DD4BF' },
-    { label: '음식', color: '#22C55E' },
-    { label: '숙소', color: '#A855F7' },
-    { label: '카페/디저트', color: '#FACC15' }
+    { label: '관광', color: '#EF4444', defaultImg: tourImg },
+    { label: '체험', color: '#F97316', defaultImg: activityImg },
+    { label: '쇼핑', color: '#2DD4BF', defaultImg: shoppingImg },
+    { label: '음식', color: '#22C55E', defaultImg: foodImg },
+    { label: '숙소', color: '#A855F7', defaultImg: hotelImg },
+    { label: '카페/디저트', color: '#FACC15', defaultImg: cafeImg }
   ];
 
   useEffect(() => {
@@ -45,7 +70,6 @@ function PlaceDetailPage() {
     }
   }, [placeId, tripId]);
 
-  // ✅ 이미지 삭제 함수
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
@@ -55,6 +79,11 @@ function PlaceDetailPage() {
     const savedPlaces = JSON.parse(localStorage.getItem(`places_${tripId}`)) || [];
     const currentCat = categories.find(c => c.label === selectedCategory);
     
+    let finalImages = images;
+    if (images.length === 0 && currentCat) {
+      finalImages = [currentCat.defaultImg];
+    }
+
     const placeData = {
       id: placeId === 'new' ? Date.now().toString() : placeId,
       name: placeName,
@@ -62,7 +91,7 @@ function PlaceDetailPage() {
       category: selectedCategory,
       color: currentCat ? currentCat.color : '#587CFF',
       memo: memo,
-      images: images,
+      images: finalImages,
     };
 
     const updated = placeId === 'new' 
@@ -84,87 +113,100 @@ function PlaceDetailPage() {
   };
 
   return (
-    <S.Container>
-      <S.Navbar>
-        <S.LogoWrapper onClick={() => navigate('/')}>
-          <div className="logo-circle"><img src={logoImg} alt="logo" /></div>
-          <span>Project4</span>
-        </S.LogoWrapper>
-      </S.Navbar>
+    <Container>
+      <Navbar>
+        <LogoWrapper onClick={() => navigate('/')}>
+          <img src={logoImg} alt="logo" />
+        </LogoWrapper>
+      </Navbar>
 
-      <S.MainCard>
-        <S.BackContainer onClick={() => navigate(`/trips/${tripId}/places`)}>
+      <MainCard>
+        <BackContainer onClick={() => navigate(`/trips/${tripId}/places`)}>
           <FiChevronLeft /> <span>장소 페이지로 돌아가기</span>
-        </S.BackContainer>
+        </BackContainer>
 
-        <S.TitleSection>
+        <TitleSection>
           {isEditing ? (
-            <S.EditInputArea>
-              <input className="name-input" value={placeName} onChange={(e) => setPlaceName(e.target.value)} placeholder="장소명을 입력하세요" />
+            <EditInputArea>
+              <input 
+                className="name-input" 
+                value={placeName} 
+                onChange={(e) => setPlaceName(e.target.value)} 
+                placeholder="장소명을 입력하세요" 
+              />
               <div className="date-input-box">
                 <FiCalendar />
                 <input type="date" value={placeDate} onChange={(e) => setPlaceDate(e.target.value)} />
               </div>
-            </S.EditInputArea>
+            </EditInputArea>
           ) : (
             <>
               <h2>{placeName || '장소명'}</h2>
               <span className="date-text">{placeDate}</span>
             </>
           )}
-        </S.TitleSection>
+        </TitleSection>
 
-        <S.CategoryGroup>
+        <CategoryGroup>
           {categories.map((cat) => (
-            <S.CategoryBtn 
+            <CategoryBtn 
               key={cat.label} 
               isSelected={selectedCategory === cat.label} 
               activeColor={cat.color}
               onClick={() => isEditing && setSelectedCategory(cat.label)}
-            >{cat.label}</S.CategoryBtn>
+            >
+              {cat.label}
+            </CategoryBtn>
           ))}
-        </S.CategoryGroup>
+        </CategoryGroup>
 
-        <S.CardList>
+        <CardList>
           {images.map((img, idx) => (
-            <S.PhotoCard key={idx}>
+            <PhotoCard key={idx}>
               <img src={img} alt="upload" />
-              {/* ✅ 편집 모드일 때만 삭제 버튼 노출 */}
               {isEditing && (
-                <S.DeleteImgBtn onClick={() => removeImage(idx)}>
+                <DeleteImgBtn onClick={() => removeImage(idx)}>
                   <FiX />
-                </S.DeleteImgBtn>
+                </DeleteImgBtn>
               )}
-            </S.PhotoCard>
+            </PhotoCard>
           ))}
           {isEditing && (
-            <S.AddMoreBtn onClick={() => fileInputRef.current.click()}>
-              <FiPlus /><input type="file" hidden ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple />
-            </S.AddMoreBtn>
+            <AddMoreBtn onClick={() => fileInputRef.current.click()}>
+              <FiPlus />
+              <input type="file" hidden ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple />
+            </AddMoreBtn>
           )}
-        </S.CardList>
+        </CardList>
 
-        <S.MemoSection>
+        <MemoSection>
           <h3>Memo</h3>
-          <S.MemoBox>
+          <MemoBox>
+            {/* 메모 입력창이 짤리지 않도록 스타일 수정 필요 */}
             {isMemoEditing && isEditing ? (
-              <textarea value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={() => setIsMemoEditing(false)} autoFocus />
+              <textarea 
+                value={memo} 
+                onChange={(e) => setMemo(e.target.value)} 
+                onBlur={() => setIsMemoEditing(false)} 
+                placeholder="내용을 입력하세요..."
+                autoFocus 
+              />
             ) : (
               <div className="memo-content">
                 <p>{memo || '메모를 입력하세요.'}</p>
-                {isEditing && <FiEdit2 onClick={() => setIsMemoEditing(true)} />}
+                {isEditing && <FiEdit2 onClick={() => setIsMemoEditing(true)} style={{ cursor: 'pointer' }} />}
               </div>
             )}
-          </S.MemoBox>
-        </S.MemoSection>
+          </MemoBox>
+        </MemoSection>
 
-        <S.ActionWrapper>
+        <ActionWrapper>
           <Button bg="#587CFF" padding="10px 40px" radius="50px" onClick={isEditing ? handleSave : () => setIsEditing(true)}>
             {isEditing ? '저장하기' : '수정하기'}
           </Button>
-        </S.ActionWrapper>
-      </S.MainCard>
-    </S.Container>
+        </ActionWrapper>
+      </MainCard>
+    </Container>
   );
 }
 

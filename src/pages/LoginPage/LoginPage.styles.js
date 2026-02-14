@@ -9,15 +9,19 @@ export const Container = styled.div`
 `;
 
 export const Header = styled.div`
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 30px;
+  text-align: center;
+  width: 100&;
 `;
 
 export const Logo = styled.div`
-  width: 200px;
-  height: 200px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  margin-bottom: -60px;
+  margin-bottom: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
