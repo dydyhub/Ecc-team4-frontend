@@ -6,6 +6,9 @@ export const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background-color: #f1f7ff; 
+  padding: 20px;
+  box-sizing: border-box;
 `;
 
 export const Header = styled.div`
@@ -14,19 +17,33 @@ export const Header = styled.div`
   align-items: center;
   margin-bottom: 30px;
   text-align: center;
-  width: 100&;
+  width: 100%; 
+
+  .logo-area {
+    margin-bottom: 10px; 
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0; 
+    line-height: 1.5;
+  }
+
+  p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0; 
+    margin-top: 2px; 
+  }
 `;
 
-export const Logo = styled.div`
+export const Logo = styled.img`
   width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  img { width: 100%; height: 100%; object-fit: contain;}
+  height: auto;
+  object-fit: contain;
+  display: block;
 `;
 
 export const Card = styled.div`
@@ -36,6 +53,8 @@ export const Card = styled.div`
   box-shadow: 0px 4px 20px rgba(37, 99, 235, 0.18);
   width: 100%;
   max-width: 420px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-in-out; 
 `;
 
 export const TabWrapper = styled.div`
@@ -70,32 +89,43 @@ export const InputWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 
   .input-icon {
     position: absolute;
     left: 15px;      
     color: #9ca3af; 
     font-size: 18px;
+    z-index: 1; 
   }
 
   input {
     width: 100%;
     padding: 12px 12px 12px 45px; 
-    border: 1px solid ${({ isError }) => (isError ? 'red' : '#e5e7eb')};
+    border: 1px solid ${(props) => (props.isError ? '#ef4444' : '#e5e7eb')};
     border-radius: 12px;
     background-color: #f9fafb;
     outline: none;
+    font-size: 15px;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
 
     &:focus {
-      border-color: ${({ isError }) => (isError ? 'red' : '#2563eb')};
+      border-color: ${(props) => (props.isError ? '#ef4444' : '#2563eb')};
+      background-color: white;
+      box-shadow: 0 0 0 3px ${(props) => (props.isError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 99, 235, 0.1)')};
     }
   }
 `;
 
 export const ErrorMessage = styled.span`
-  color: red;
+  color: #ef4444;
   font-size: 11px;
-  margin-top: -4px; /* 간격 미세 조정 */
+  margin-top: 4px;
   margin-left: 4px;
-  height: 14px; /* 에러 메시지 유무에 따른 덜컹거림 방지 */
+  min-height: 14px; 
+  display: block;
 `;

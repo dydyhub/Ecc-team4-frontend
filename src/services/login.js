@@ -1,13 +1,18 @@
-import api from './api';
+import axios from 'axios';
 
-export const signupUser = (userData) => {
-  return api.post('/users/signup', userData);
-};
+const api = axios.create({
+  baseURL: '/api',
+});
 
-export const loginUser = (credentials) => {
-  return api.post('/users/login', credentials, { withCredentials: true });
-};
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`; 
+  }
+  return config;
+});
 
-export const logoutUser = () => {
-  return api.post('/users/logout', {}, { withCredentials: true });
-};
+export const signupUser = (data) => api.post('/users/signup', data);
+export const loginUser = (data) => api.post('/users/login', data);
+
+export const logoutUser = () => api.post('/users/logout');

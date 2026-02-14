@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiEdit2, FiPlus, FiChevronLeft, FiCalendar, FiX } from 'react-icons/fi';
+import axios from 'axios'; 
 import tourImg from '../../assets/관광.png';
 import activityImg from '../../assets/체험.png';
 import shoppingImg from '../../assets/쇼핑.png';
@@ -39,7 +40,8 @@ function PlaceDetailPage() {
   const [placeDate, setPlaceDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [memo, setMemo] = useState('');
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState([]); 
+  const [newFiles, setNewFiles] = useState([]); 
   const [isEditing, setIsEditing] = useState(false);
   const [isMemoEditing, setIsMemoEditing] = useState(false);
 
@@ -52,62 +54,73 @@ function PlaceDetailPage() {
     { label: '카페/디저트', color: '#FACC15', defaultImg: cafeImg }
   ];
 
+  // 1. 장소 상세 조회 API 연동
   useEffect(() => {
-    if (placeId === 'new') {
+    if (placeId !== 'new') {
+      const fetchDetail = async () => {
+        try {
+          const response = await axios.get(`/trips/${tripId}/places/${placeId}`);
+          const { name, category, description, imageUrls, createdAt } = response.data;
+          setPlaceName(name);
+          setSelectedCategory(category);
+          setMemo(description);
+          setImages(imageUrls || []); 
+          setPlaceDate(createdAt?.split('T')[0]);
+          setIsEditing(false);
+        } catch (error) {
+          console.error("장소 상세 정보를 불러오지 못했습니다.", error);
+        }
+      };
+      fetchDetail();
+    } else {
       setIsEditing(true);
       setPlaceDate(new Date().toISOString().split('T')[0]);
-    } else {
-      const savedPlaces = JSON.parse(localStorage.getItem(`places_${tripId}`)) || [];
-      const data = savedPlaces.find(p => p.id === placeId);
-      if (data) {
-        setPlaceName(data.name);
-        setPlaceDate(data.date);
-        setSelectedCategory(data.category);
-        setMemo(data.memo);
-        setImages(data.images || []);
-      }
-      setIsEditing(false);
     }
   }, [placeId, tripId]);
 
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+    setNewFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
+  // 2. 장소 저장(등록 및 수정) API 연동
+  const handleSave = async () => {
     if (!placeName) return alert('장소명을 입력해주세요!');
-    const savedPlaces = JSON.parse(localStorage.getItem(`places_${tripId}`)) || [];
-    const currentCat = categories.find(c => c.label === selectedCategory);
+
+    const formData = new FormData();
     
-    let finalImages = images;
-    if (images.length === 0 && currentCat) {
-      finalImages = [currentCat.defaultImg];
-    }
-
-    const placeData = {
-      id: placeId === 'new' ? Date.now().toString() : placeId,
+    const jsonData = {
       name: placeName,
-      date: placeDate,
-      category: selectedCategory,
-      color: currentCat ? currentCat.color : '#587CFF',
-      memo: memo,
-      images: finalImages,
+      description: memo,
+      category: selectedCategory
     };
+    formData.append('data', new Blob([JSON.stringify(jsonData)], { type: 'application/json' }));
 
-    const updated = placeId === 'new' 
-      ? [...savedPlaces, placeData] 
-      : savedPlaces.map(p => p.id === placeId ? placeData : p);
+    newFiles.forEach(file => {
+      formData.append('images', file);
+    });
 
-    localStorage.setItem(`places_${tripId}`, JSON.stringify(updated));
-    alert('저장되었습니다!');
-    navigate(`/trips/${tripId}/places`);
+    try {
+      if (placeId === 'new') {
+       
+        await axios.post(`/trips/${tripId}/places`, formData);
+      } else {
+        await axios.post(`/trips/${tripId}/places/${placeId}`, formData);
+      }
+      alert('저장되었습니다!');
+      navigate(`/trips/${tripId}/places`);
+    } catch (error) {
+      alert('저장에 실패했습니다.');
+    }
   };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    setNewFiles(prev => [...prev, ...files]); 
+
     files.forEach(file => {
       const reader = new FileReader();
-      reader.onloadend = () => setImages(prev => [...prev, reader.result]);
+      reader.onloadend = () => setImages(prev => [...prev, reader.result]); 
       reader.readAsDataURL(file);
     });
   };
@@ -136,7 +149,7 @@ function PlaceDetailPage() {
               />
               <div className="date-input-box">
                 <FiCalendar />
-                <input type="date" value={placeDate} onChange={(e) => setPlaceDate(e.target.value)} />
+                <input type="date" value={placeDate} onChange={(e) => setPlaceDate(e.target.value)} readOnly />
               </div>
             </EditInputArea>
           ) : (
@@ -182,7 +195,6 @@ function PlaceDetailPage() {
         <MemoSection>
           <h3>Memo</h3>
           <MemoBox>
-            {/* 메모 입력창이 짤리지 않도록 스타일 수정 필요 */}
             {isMemoEditing && isEditing ? (
               <textarea 
                 value={memo} 
