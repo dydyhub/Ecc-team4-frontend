@@ -26,8 +26,8 @@ import {
 } from './TripsPage.styles';
 
 const TRAVEL_FILTER_OPTIONS = [
-  { label: '새로운 여행', value: 1 },
-  { label: '다녀온 여행', value: 2 },
+  { label: '새로운 여행', value: 2 },
+  { label: '다녀온 여행', value: 1 },
 ];
 
 const ITEMS_PER_PAGE = 6;
@@ -49,6 +49,7 @@ export default function TripsPage() {
     const fetchTrips = async () => {
       try {
         const res = await getTrips();
+
         setTravels(res.data.data || []);
       } catch {
         alert('여행 목록을 불러오지 못했어요');
@@ -144,6 +145,7 @@ export default function TripsPage() {
           previousLabel={'<'}
           nextLabel={'>'}
           pageCount={pageCount}
+          forcePage={currentPage}
           onPageChange={handlePageClick}
           containerClassName={'pagination'}
           activeClassName={'active'}
