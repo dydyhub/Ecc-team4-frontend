@@ -33,6 +33,8 @@ const TRAVEL_FILTER_OPTIONS = [
 const ITEMS_PER_PAGE = 6;
 
 const formatPeriod = (startDate, endDate) => {
+  if (!startDate || !endDate) return '';
+
   return `${startDate.replaceAll('-', '.')} - ${endDate.replaceAll('-', '.')}`;
 };
 
@@ -45,13 +47,16 @@ export default function TripsPage() {
   const [travels, setTravels] = useState([]);
 
   useEffect(() => {
-    getTrips()
-      .then((res) => {
-        setTravels(res.data);
-      })
-      .catch(() => {
+    const fetchTrips = async () => {
+      try {
+        const res = await getTrips();
+        setTravels(Array.isArray(res.data) ? res.data : []);
+      } catch {
         alert('여행 목록을 불러오지 못했어요');
-      });
+      }
+    };
+
+    fetchTrips();
   }, [location.pathname]);
 
   const filteredTravels = travels.filter((travel) => travel.status === filter);

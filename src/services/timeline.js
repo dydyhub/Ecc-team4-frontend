@@ -11,3 +11,11 @@ export const addTimelineItem = (tripId, timelineData) => {
 export const deleteTimelineItem = (timelineId) => {
   return api.delete(`/trips/timeline/${timelineId}`);
 };
+
+export const updateTimelineItem = (tripId, timelineId, timelineData) => {
+  return api.put(`/trips/${tripId}/timeline/${timelineId}`, timelineData);
+};
+
+export const updateTripDays = (tripId, daysData) => {
+  return api.put(`/trips/${tripId}/days`, daysData);
+};

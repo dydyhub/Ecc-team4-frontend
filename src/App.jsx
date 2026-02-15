@@ -23,7 +23,6 @@ function App() {
 
           {/* 여행 추가 */}
           <Route path="/trips/new" element={<TripCreatePage />} />
-
           {/* 여행 수정 */}
           <Route path="/trips/:tripId/edit" element={<TripCreatePage />} />
 
@@ -42,6 +41,11 @@ function App() {
           {/* 스케쥴 추가 */}
           <Route
             path="/trips/:tripId/timeline/add"
+            element={<ScheduleAddPage />}
+          />
+          {/* 스케쥴 수정 */}
+          <Route
+            path="/trips/:tripId/timeline/edit/:timelineId"
             element={<ScheduleAddPage />}
           />
         </Route>
