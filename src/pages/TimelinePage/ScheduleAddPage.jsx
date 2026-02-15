@@ -1,6 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { addTimelineItem } from '../../services/timeline';
+import {
+  getTripTimeline,
+  addTimelineItem,
+  updateTimelineItem,
+} from '../../services/timeline';
 import { getPlaces, getPlaceDetail } from '../../services/places';
 
 import Card from '../../components/Card';
@@ -23,11 +27,15 @@ import {
 
 const CATEGORY_OPTIONS = ['관광', '체험', '쇼핑', '음식', '숙소', '디저트'];
 
-export default function ScheduleAddPage({ tripId }) {
+export default function ScheduleAddPage() {
   const navigate = useNavigate();
+  const { tripId, timelineId } = useParams();
+  const tripIdNum = Number(tripId);
+  const timelineIdNum = timelineId ? Number(timelineId) : null;
+  const isEditMode = !!timelineIdNum;
 
   const [places, setPlaces] = useState([]);
-  const [selectedPlace, setSelectedPlace] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState(null);
   const [placeDetail, setPlaceDetail] = useState(null);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -40,11 +48,13 @@ export default function ScheduleAddPage({ tripId }) {
   useEffect(() => {
     const fetchPlaces = async () => {
       try {
-        const res = await getPlaces(tripId);
-        const options = res.data.map((place) => ({
-          value: place.placeId,
-          label: place.name,
-        }));
+        const res = await getPlaces(tripIdNum);
+        const options = Array.isArray(res.data)
+          ? res.data.map((place) => ({
+              value: place.placeId,
+              label: place.name,
+            }))
+          : [];
         setPlaces(options);
       } catch {
         alert('실패');
@@ -52,14 +62,17 @@ export default function ScheduleAddPage({ tripId }) {
     };
 
     fetchPlaces();
-  }, [tripId]);
+  }, [tripIdNum]);
 
   useEffect(() => {
-    if (!selectedPlace) return;
+    if (!selectedPlace) {
+      setPlaceDetail(null);
+      return;
+    }
 
     const fetchPlaceDetail = async () => {
       try {
-        const res = await getPlaceDetail(tripId, selectedPlace);
+        const res = await getPlaceDetail(tripIdNum, selectedPlace);
         setPlaceDetail(res.data);
       } catch {
         alert('실패');
@@ -67,30 +80,67 @@ export default function ScheduleAddPage({ tripId }) {
     };
 
     fetchPlaceDetail();
-  }, [selectedPlace, tripId]);
+  }, [selectedPlace, tripIdNum]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const fetchTimelineDetail = async () => {
+      try {
+        const res = await getTripTimeline(tripIdNum);
+
+        const allItems = res.data.days.flatMap((day) =>
+          day.items.map((item) => ({
+            ...item,
+            dayDate: day.dayDate,
+          })),
+        );
+
+        const item = allItems.find((i) => i.timelineId === timelineIdNum);
+
+        if (!item) return;
+
+        setSelectedPlace(item.placeId);
+
+        setSelectedDate(new Date(item.dayDate));
+
+        setStartTime(new Date(`1970-01-01T${item.startTime}`));
+
+        setEndTime(new Date(`1970-01-01T${item.endTime}`));
+      } catch {
+        alert('일정 조회 실패');
+      }
+    };
+
+    fetchTimelineDetail();
+  }, [isEditMode, tripIdNum, timelineIdNum]);
 
   const handleSave = async () => {
-    if (!startTime || !endTime || !selectedPlace || !placeDetail) return;
+    if (!startTime || !endTime || !selectedPlace) return;
 
     setLoading(true);
 
     try {
       const timelineData = {
-        dayDate: selectedDate.toISOString().slice(0, 10), // yyyy-mm-dd
-        startTime: startTime.toTimeString().slice(0, 5), // HH:mm
-        endTime: endTime.toTimeString().slice(0, 5), // HH:mm
-        placeId: placeDetail.placeId,
-        name: placeDetail.name,
-        description: placeDetail.description,
-        category: placeDetail.category,
-        coverImageUrl: placeDetail.coverImageUrl,
-        imageUrls: placeDetail.imageUrls,
+        dayDate: selectedDate.toISOString().slice(0, 10),
+        startTime: startTime.toTimeString().slice(0, 5),
+        endTime: endTime.toTimeString().slice(0, 5),
+        placeId: selectedPlace,
       };
 
-      await addTimelineItem(tripId, timelineData);
+      if (isEditMode) {
+        await updateTimelineItem(tripIdNum, timelineIdNum, timelineData);
+
+        alert('수정 완료');
+      } else {
+        await addTimelineItem(tripIdNum, timelineData);
+
+        alert('추가 완료');
+      }
+
       navigate(-1);
     } catch {
-      alert('일정 추가에 실패했습니다.');
+      alert('실패');
     } finally {
       setLoading(false);
     }
@@ -106,7 +156,7 @@ export default function ScheduleAddPage({ tripId }) {
               options={places}
               value={places.find((p) => p.value === selectedPlace)}
               onChange={(selectedOption) =>
-                setSelectedPlace(selectedOption.value)
+                setSelectedPlace(selectedOption?.value || null)
               }
               style={{ flex: 1 }}
             />
@@ -207,7 +257,7 @@ export default function ScheduleAddPage({ tripId }) {
         }}
       >
         <Button onClick={handleSave} disabled={isInvalidTime || loading}>
-          추가하기
+          {isEditMode ? '수정하기' : '추가하기'}
         </Button>
         <Button onClick={() => navigate(-1)}>취소</Button>
       </div>

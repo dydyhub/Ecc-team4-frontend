@@ -39,7 +39,7 @@ export default function Layout() {
   `;
 
   const SiteName = styled.div`
-    font-size: 36px;
+    font-size: 30px;
     font-weight: 700;
     color: #111827;
     letter-spacing: -1px;
@@ -53,7 +53,7 @@ export default function Layout() {
   `;
 
   const Logo = styled.img`
-    height: 96px;
+    height: 30px;
     width: auto;
     object-fit: contain;
   `;

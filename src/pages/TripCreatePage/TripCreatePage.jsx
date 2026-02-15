@@ -123,13 +123,18 @@ export default function TripCreatePage() {
     try {
       setIsLoading(true);
 
+      const data = {
+        title: form.title,
+        destination: form.destination,
+        isDomestic: form.type === 'domestic',
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        description: form.memo,
+      };
+
       const formData = new FormData();
-      formData.append('title', form.title);
-      formData.append('destination', form.destination);
-      formData.append('isDomestic', form.type === 'domestic');
-      formData.append('startDate', startDate.toISOString().split('T')[0]);
-      formData.append('endDate', endDate.toISOString().split('T')[0]);
-      formData.append('description', form.memo);
+
+      formData.append('data', JSON.stringify(data));
 
       if (imageFile) {
         formData.append('image', imageFile);

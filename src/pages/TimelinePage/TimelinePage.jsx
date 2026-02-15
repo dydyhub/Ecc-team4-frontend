@@ -1,6 +1,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getTripTimeline, deleteTimelineItem } from '../../services/timeline';
+import {
+  getTripTimeline,
+  deleteTimelineItem,
+  updateTripDays,
+} from '../../services/timeline';
 import { getPlaceDetail } from '../../services/places';
 
 import Card from '../../components/Card';
@@ -55,6 +59,7 @@ const getDayLabel = (dateStr) => {
 
 export default function TimelinePage() {
   const { tripId } = useParams();
+  const tripIdNum = Number(tripId);
   const navigate = useNavigate();
 
   const [daysData, setDaysData] = useState([]);
@@ -66,7 +71,7 @@ export default function TimelinePage() {
   useEffect(() => {
     async function fetchTimeline() {
       try {
-        const res = await getTripTimeline(tripId);
+        const res = await getTripTimeline(tripIdNum);
         const apiDays = res.data.days;
 
         const mappedDays = await Promise.all(
@@ -75,7 +80,10 @@ export default function TimelinePage() {
               day.items.map(async (item) => {
                 let placeDetail = {};
                 try {
-                  const detailRes = await getPlaceDetail(tripId, item.placeId);
+                  const detailRes = await getPlaceDetail(
+                    tripIdNum,
+                    item.placeId,
+                  );
                   placeDetail = detailRes.data;
                 } catch {
                   alert('장소 상세 조회 실패');
@@ -117,44 +125,78 @@ export default function TimelinePage() {
     }
 
     fetchTimeline();
-  }, [tripId]);
+  }, [tripIdNum]);
 
-  const selectedDay = daysData[selectedDayIndex];
+  const selectedDay = daysData[selectedDayIndex] || {};
 
   const handleDeleteSchedule = async (timelineId) => {
     try {
       await deleteTimelineItem(timelineId);
 
-      const newDays = [...daysData];
-      newDays[selectedDayIndex].schedules = newDays[
-        selectedDayIndex
-      ].schedules.filter((s) => s.timelineId !== timelineId);
-      setDaysData(newDays);
+      setDaysData((prev) =>
+        prev.map((day, index) => {
+          if (index !== selectedDayIndex) return day;
+
+          return {
+            ...day,
+            schedules: day.schedules.filter((s) => s.timelineId !== timelineId),
+          };
+        }),
+      );
     } catch {
       alert('삭제 실패');
     }
   };
 
   const handleMemoChange = (e) => {
-    const newDays = [...daysData];
-    newDays[selectedDayIndex].memo = e.target.value;
-    setDaysData(newDays);
+    setDaysData((prev) =>
+      prev.map((day, index) =>
+        index === selectedDayIndex ? { ...day, memo: e.target.value } : day,
+      ),
+    );
   };
 
   const handleBudgetChange = (field, value) => {
-    const newDays = [...daysData];
-    newDays[selectedDayIndex].budget[field] = value;
-    setDaysData(newDays);
+    setDaysData((prev) =>
+      prev.map((day, index) =>
+        index === selectedDayIndex
+          ? {
+              ...day,
+              budget: {
+                ...day.budget,
+                [field]: value,
+              },
+            }
+          : day,
+      ),
+    );
   };
 
-  const handleSave = () => {
-    // 저장 API
-    navigate('/trips');
+  const handleSave = async () => {
+    try {
+      const requestData = {
+        days: daysData.map((day) => ({
+          dayId: day.dayId,
+          themeTitle: day.theme,
+          dayNote: day.memo,
+          budgetPlanned: Number(day.budget.planned) || 0,
+          budgetSpent: Number(day.budget.spent) || 0,
+        })),
+      };
+
+      await updateTripDays(tripIdNum, requestData);
+
+      alert('저장 완료');
+
+      navigate('/trips');
+    } catch {
+      alert('저장 실패');
+    }
   };
 
   const handleTabChange = (index) => {
     if (index === 1) {
-      navigate(`/trips/${tripId}/places`);
+      navigate(`/trips/${tripIdNum}/places`);
     }
   };
 
@@ -232,6 +274,7 @@ export default function TimelinePage() {
                           >
                             <MoreMenu
                               timelineId={item.timelineId}
+                              placeId={item.placeId}
                               handleDeleteSchedule={handleDeleteSchedule}
                             />
                           </div>
@@ -298,7 +341,9 @@ export default function TimelinePage() {
             </Card>
 
             <SideFooter>
-              <Button onClick={() => navigate(`/trips/${tripId}/timeline/add`)}>
+              <Button
+                onClick={() => navigate(`/trips/${tripIdNum}/timeline/add`)}
+              >
                 새 일정 추가
               </Button>
 
@@ -311,8 +356,10 @@ export default function TimelinePage() {
   );
 }
 
-function MoreMenu({ timelineId, handleDeleteSchedule }) {
+function MoreMenu({ timelineId, placeId, handleDeleteSchedule }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { tripId } = useParams();
 
   return (
     <div style={{ position: 'relative' }}>
@@ -341,7 +388,18 @@ function MoreMenu({ timelineId, handleDeleteSchedule }) {
             minWidth: '120px',
           }}
         >
-          <MenuItem onClick={() => alert('장소 보기')}>장소 보기</MenuItem>
+          <MenuItem
+            onClick={() => navigate(`/trips/${tripId}/places/${placeId}`)}
+          >
+            장소 보기
+          </MenuItem>
+          <MenuItem
+            onClick={() =>
+              navigate(`/trips/${tripId}/timeline/edit/${timelineId}`)
+            }
+          >
+            일정 수정
+          </MenuItem>
           <MenuItem danger onClick={() => handleDeleteSchedule(timelineId)}>
             일정 삭제
           </MenuItem>

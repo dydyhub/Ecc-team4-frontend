@@ -5,11 +5,7 @@ export const getTrips = () => {
 };
 
 export const createTrip = (formData) => {
-  return api.post('/trips', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return api.post('/trips', formData);
 };
 
 export const getTripDetail = (tripId) => {
@@ -21,9 +17,5 @@ export const deleteTrip = (tripId) => {
 };
 
 export const updateTrip = (tripId, formData) => {
-  return api.patch(`/trips/${tripId}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return api.patch(`/trips/${tripId}`, formData);
 };
