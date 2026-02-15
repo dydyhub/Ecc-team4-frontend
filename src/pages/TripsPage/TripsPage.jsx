@@ -50,7 +50,8 @@ export default function TripsPage() {
     const fetchTrips = async () => {
       try {
         const res = await getTrips();
-        setTravels(Array.isArray(res.data) ? res.data : []);
+        console.log(res.data);
+        setTravels(res.data.data || []);
       } catch {
         alert('여행 목록을 불러오지 못했어요');
       }
@@ -108,7 +109,9 @@ export default function TripsPage() {
             <Card padding="0" radius="12px">
               <CardInner backgroundImage={travel.imageUrl || logoImg}>
                 <CardOverlay>
-                  <Country>{travel.destination}</Country>
+                  <Country>
+                    {travel.title} - {travel.destination}
+                  </Country>
                   <Period>
                     {formatPeriod(travel.startDate, travel.endDate)}
                   </Period>
